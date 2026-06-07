@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+<meta charset="UTF-8">
+<title>EduGest Disciplinas</title>
+  <script type="module" src="auth-guard.js"></script>
+
+<link rel="stylesheet" href="styles/style.css">
+<link rel="stylesheet" href="styles/style.css">
+<script src="libs/lucide.js"></script>
+<script src="libs/jspdf.min.js"></script>
+<script src="libs/autotable.min.js"></script>
+<script src="libs/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="styles/normalize.min.css">
+ <script src="scripts/theme.js"></script>
+
+<style>
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.6);
+  backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.modal-backdrop.active { display: flex; }
+.modal {
+  background: var(--projects-section);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%; max-width: 450px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.4);
+}
+.modal h3 { margin: 0 0 16px 0; color: var(--main-color); }
+.modal label { display: block; font-size: 13px; color: var(--secondary-color); margin: 12px 0 4px; }
+.modal input, .modal select {
+  width: 100%; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid var(--border-color, #ddd);
+  background: var(--search-area-bg);
+  color: var(--main-color);
+  font-family: inherit; font-size: 14px; outline: none;
+}
+.modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+.btn { padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+.btn-primary { background: var(--link-color-active-bg); color: #fff; }
+.btn-secondary { background: var(--search-area-bg); color: var(--main-color); border: 1px solid var(--border-color, #ddd); }
+.project-btn-more { background: var(--search-area-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 6px; cursor: pointer; color: var(--main-color); }
+</style>
+</head>
+<body>
+<div class="app-container">
+  <div class="app-header">
+    <div class="app-header-left">
+      <span class="app-icon"></span>
+      <p class="app-name">EduGest</p>
+      <div class="search-wrapper">
+        <input class="search-input" type="text" placeholder="Buscar disciplina..." id="searchDisc">
+        <i data-lucide="search"></i>
+      </div>
+    </div>
+    <div class="app-header-right">
+      <button class="mode-switch" title="Alternar Tema"><i data-lucide="moon"></i></button>
+      <button class="add-btn" title="Nova Disciplina" id="btnAddDisc"><i data-lucide="plus"></i></button>
+      <button class="profile-btn" id="btnPerfil">
+        <div id="avatarIcon" style="width:32px;height:32px;border-radius:50%;background:var(--card-1);display:flex;align-items:center;justify-content:center;color:#2563eb"></div>
+        <span id="userName">Usuário</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="app-content">
+    <div class="app-sidebar">
+      <a href="dashboard.html" class="app-sidebar-link" title="Dashboard"><i data-lucide="home"></i></a>
+      <a href="funcionarios.html" class="app-sidebar-link" title="Funcionários"><i data-lucide="user"></i></a>
+      <a href="prof.html" class="app-sidebar-link" title="Professores"><i data-lucide="users"></i></a>
+      <a href="disciplina.html" class="app-sidebar-link active" title="Disciplinas"><i data-lucide="book-open"></i></a>
+      <a href="turmas.html" class="app-sidebar-link" title="Turmas"><i data-lucide="graduation-cap"></i></a>
+      <a href="cursos.html" class="app-sidebar-link" title="Cursos"><i data-lucide="library"></i></a>
+      <a href="estudantes.html" class="app-sidebar-link" title="Estudantes"><i data-lucide="school"></i></a>
+      <a href="config.html" class="app-sidebar-link" title="Configurações"><i data-lucide="settings"></i></a>
+    </div>
+
+    <div class="projects-section">
+      <div class="projects-section-header">
+        <p>Disciplinas</p>
+        <div class="view-actions">
+          <button class="view-btn list-view" title="Lista"><i data-lucide="list"></i></button>
+          <button class="view-btn grid-view active" title="Grade"><i data-lucide="layout-grid"></i></button>
+        </div>
+      </div>
+      
+      <div class="projects-section-line">
+        <div class="projects-status" id="discStats">
+          <div class="item-status">
+            <span class="status-number" id="totalDisc">0</span>
+            <span class="status-type">Total</span>
+          </div>
+          <div class="item-status">
+            <span class="status-number" id="mediaCarga">0</span>
+            <span class="status-type">Média h/semana</span>
+          </div>
+          <div class="item-status">
+            <span class="status-number" id="professoresDisc">0</span>
+            <span class="status-type">Professores</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-boxes jsGridView" id="discContainer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Cadastro -->
+<div class="modal-backdrop" id="modalDisc">
+  <div class="modal">
+    <h3 id="modalTitle">Nova Disciplina</h3>
+    <label>Nome da Disciplina</label>
+    <input type="text" id="nomeDisc" placeholder="Ex: Matemática">
+    
+    <label>Curso</label>
+    <select id="cursoDisc">
+      <option value="">Seleciona um curso...</option>
+    </select>
+    
+    <label>Carga Horária Semanal</label>
+    <input type="number" id="cargaDisc" min="1" max="20" value="4">
+    
+    <label>Tipo</label>
+    <select id="tipoDisc">
+      <option>Teórica</option>
+      <option>Prática</option>
+      <option>Teórico-Prática</option>
+    </select>
+    
+    <label>Professor Responsável</label>
+    <input type="text" id="profDisc" placeholder="Ex: João Manuel">
+    
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btnCancelar">Cancelar</button>
+      <button class="btn btn-primary" id="btnSalvar">Salvar</button>
+    </div>
+  </div>
+</div>
+ 
+
+<script src="modulos/disc.js">
+  
+  
+  
+</script>
+</body>
+</html>

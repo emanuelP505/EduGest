@@ -4,9 +4,12 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Vercel-Skip-Toolbar", "value": "1" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "X-Vercel-Skip-Toolbar", "value": "1" }
       ]
     }
-  ]
+  ],
+  "firewall": {
+    "enabled": false
+  }
 }

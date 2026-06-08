@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EduGest Cadastro</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="theme.js"></script>
+<style>
+.login-container{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--app-bg);padding:20px}
+.login-box{background:var(--projects-section);border:1px solid var(--border-color);border-radius:20px;padding:40px 32px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.login-box h2{text-align:center;margin:0 0 8px 0;color:var(--main-color);font-size:24px}
+.login-box p{text-align:center;margin:0 0 24px 0;color:var(--secondary-color);font-size:14px}
+
+.campo {margin-bottom: 1rem}
+.campo label{display:block;font-size:13px;color:var(--secondary-color);margin:0 0 6px;font-weight:500}
+.campo input{
+  width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border-color);
+  background:var(--search-area-bg);color:var(--main-color);font-size:14px;outline:none;
+  font-family:inherit;box-sizing:border-box
+}
+.campo input:hover{box-shadow:2px 2px 8px rgba(0,0,0,.1)}
+.campo small{display:block;color:#64748b;font-size:12px;margin-top:4px}
+
+.btn-login{
+  width:100%;padding:12px;border:none;border-radius:10px;background:var(--link-color-active-bg);
+  color:#fff;font-weight:600;font-size:15px;cursor:pointer;margin-top:20px;transition:.2s
+}
+.btn-login:disabled{opacity:.5;cursor:not-allowed}
+
+.input-erro{border-color:#ef4444 !important}
+.erro-campo{
+  color:#ef4444;font-size:0.875rem;display:block;
+  margin-top:0.25rem;min-height:1.25rem
+}
+
+#erroMsg{color:#dc2626;font-size:13px;margin-top:12px;display:none;text-align:center;padding:8px;background:rgba(220,38,38,.1);border-radius:6px}
+#sucessoMsg{color:#16a34a;font-size:13px;margin-top:12px;display:none;text-align:center;padding:8px;background:rgba(22,163,74,.1);border-radius:6px}
+</style>
+</head>
+<body>
+<div class="login-container">
+  <div class="login-box">
+    <div class="logo-wrapper" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:24px">
+      <i class="fa-solid fa-graduation-cap" style="font-size:40px;color:var(--link-color-active-bg)"></i>
+      <span class="app-name" style="font-size:22px;font-weight:700;color:var(--main-color)">EduGest</span>
+    </div>
+    <h2>Criar Conta Escola</h2>
+    <p>Cadastre sua escola e conta de diretor</p>
+
+    <form id="formCadastro">
+      <div class="campo">
+        <label for="codigoConvite">Código de Convite *</label>
+        <input type="text" id="codigoConvite" placeholder="EDU-X7K9P2" style="text-transform:uppercase">
+        <small>Solicite o código com o administrador</small>
+        <span class="erro-campo" id="erro-codigo"></span>
+      </div>
+
+      <div class="campo">
+        <label for="nomeEscola">Nome da Escola</label>
+        <input type="text" id="nomeEscola" placeholder="Ex: Colégio Dom Bosco">
+        <span class="erro-campo" id="erro-nomeEscola"></span>
+      </div>
+
+      <div class="campo">
+        <label for="nomeDiretor">Teu Nome Completo</label>
+        <input type="text" id="nomeDiretor" placeholder="Nome do diretor">
+        <span class="erro-campo" id="erro-nomeDiretor"></span>
+      </div>
+
+      <div class="campo">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="teu@email.com">
+        <span class="erro-campo" id="erro-email"></span>
+      </div>
+
+      <div class="campo">
+        <label for="senha">Senha</label>
+        <input type="password" id="senha" placeholder="Mínimo 6 caracteres">
+        <span class="erro-campo" id="erro-senha"></span>
+      </div>
+
+      <p id="erroMsg"></p>
+      <p id="sucessoMsg"></p>
+      <button type="submit" class="btn-login" id="btnCadastro">Criar Conta</button>
+    </form>
+    
+    <div style="text-align:center;margin-top:16px;font-size:14px">
+      <a href="index.html" style="color:var(--link-color-active-bg)">Já tenho conta</a>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="cadastro.js"></script>
+</body>
+</html>

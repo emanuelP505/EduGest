@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+<meta charset="UTF-8">
+<title>EduGest Configurações</title>
+  <script type="module" src="auth-guard.js"></script>
+
+
+<link rel="stylesheet" href="style.css">
+<script src="theme.js"></script>
+<script src="lucide.js"></script>
+<script src="jspdf.min.js"></script>
+<script src="autotable.min.js"></script>
+<script src="xlsx.full.min.js"></script>
+<link rel="stylesheet" href="normalize.min.css">
+ 
+ <style>
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 32px 32px 32px;
+}
+.setting-item {
+  background-color: var(--project-card);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--project-box-shadow);
+  transition:.3s ease;
+}
+.setting-item:hover {
+  transform: translateY(-2px);
+}
+.setting-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.setting-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--card-1);
+  color: #2563eb;
+}
+.setting-text h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--main-color);
+}
+.setting-text p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--secondary-color);
+}
+.toggle-switch {
+  position: relative;
+  width: 48px;
+  height: 24px;
+  background-color: #ccc;
+  border-radius: 12px;
+  cursor: pointer;
+  transition:.3s;
+}
+.toggle-switch.active {
+  background-color: #2563eb;
+}
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition:.3s;
+}
+.toggle-switch.active::after {
+  left: 26px;
+}
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.6);
+  backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.modal-backdrop.active { display: flex; }
+.modal {
+  background: var(--projects-section);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%; max-width: 450px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.4);
+}
+.modal h3 { margin: 0 0 16px 0; color: var(--main-color); }
+.modal label { display: block; font-size: 13px; color: var(--secondary-color); margin: 12px 0 4px; }
+.modal input,.modal select {
+  width: 100%; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid var(--border-color, #ddd);
+  background: var(--search-area-bg);
+  color: var(--main-color);
+  font-family: inherit; font-size: 14px; outline: none;
+}
+.modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+.btn { padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+.btn-primary { background: var(--link-color-active-bg); color: #fff; }
+.btn-secondary { background: var(--search-area-bg); color: var(--main-color); border: 1px solid var(--border-color, #ddd); }
+.project-btn-more { background: var(--search-area-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 6px; cursor: pointer; color: var(--main-color); }
+</style>
+</head>
+<body>
+<div class="app-container">
+  <div class="app-header">
+    <div class="app-header-left">
+      <span class="app-icon"></span>
+      <p class="app-name">EduGest</p>
+      <div class="search-wrapper">
+        <input class="search-input" type="text" placeholder="Buscar configuração..." id="searchConfig">
+        <i data-lucide="search"></i>
+      </div>
+    </div>
+    <div class="app-header-right">
+      <button class="mode-switch" title="Alternar Tema">
+        <i data-lucide="moon"></i>
+      </button>
+      <button class="profile-btn" id="btnPerfil">
+        <div id="avatarIcon" style="width:32px;height:32px;border-radius:50%;background:var(--card-1);display:flex;align-items:center;justify-content:center;color:#2563eb"></div>
+        <span id="userName">Usuário</span>
+      </button>
+      
+    </div>
+  </div>
+
+  <div class="app-content">
+    <div class="app-sidebar">
+      <a href="dashboard.html" class="app-sidebar-link" title="Dashboard"><i data-lucide="home"></i></a>
+      <a href="funcionarios.html" class="app-sidebar-link" title="Funcionários"><i data-lucide="user"></i></a>
+      <a href="prof.html" class="app-sidebar-link" title="Professores"><i data-lucide="users"></i></a>
+      <a href="disciplina.html" class="app-sidebar-link" title="Disciplinas"><i data-lucide="book-open"></i></a>
+      <a href="turmas.html" class="app-sidebar-link" title="Turmas"><i data-lucide="graduation-cap"></i></a>
+      <a href="cursos.html" class="app-sidebar-link" title="Cursos"><i data-lucide="library"></i></a>
+      <a href="estudantes.html" class="app-sidebar-link" title="Estudantes"><i data-lucide="school"></i></a>
+      <a href="config.html" class="app-sidebar-link active" title="Configurações"><i data-lucide="settings"></i></a>
+    </div>
+
+    <div class="projects-section">
+      <div class="projects-section-header">
+        <p>Configurações</p>
+        <p class="time">Geral do Sistema</p>
+      </div>
+
+      <div class="settings-list" id="settingsList">
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-icon"><i data-lucide="school"></i></div>
+            <div class="setting-text">
+              <h4>Dados da Escola</h4>
+              <p id="escolaInfo">Carregando...</p>
+            </div>
+          </div>
+          <button class="project-btn-more" onclick="abrirModalEscola()"><i data-lucide="chevron-right"></i></button>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-icon" style="background-color: var(--card-2); color: #16a34a;"><i data-lucide="calendar"></i></div>
+            <div class="setting-text">
+              <h4>Ano Letivo</h4>
+              <p id="anoInfo">Carregando...</p>
+            </div>
+          </div>
+          <button class="project-btn-more" onclick="abrirModalAno()"><i data-lucide="chevron-right"></i></button>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-icon" style="background-color: var(--card-3); color: #ca8a04;"><i data-lucide="bell"></i></div>
+            <div class="setting-text">
+              <h4>Notificações</h4>
+              <p>Alertas de matrícula e faltas</p>
+            </div>
+          </div>
+          <div class="toggle-switch" id="toggleNotif" onclick="toggleNotificacoes()"></div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-icon" style="background-color: var(--card-4); color: #9333ea;"><i data-lucide="shield"></i></div>
+            <div class="setting-text">
+              <h4>Permissões</h4>
+              <p>Gestão de acesso por perfil</p>
+            </div>
+          </div>
+          <button class="project-btn-more" onclick="alert('Módulo de permissões em desenvolvimento')"><i data-lucide="chevron-right"></i></button>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-icon" style="background-color: var(--card-5); color: #dc2626;"><i data-lucide="download"></i></div>
+            <div class="setting-text">
+              <h4>Backup de Dados</h4>
+              <p id="backupInfo">Nenhum backup feito</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px">
+            <button class="project-btn-more" onclick="exportarBackup()" title="Exportar"><i data-lucide="download"></i></button>
+            <button class="project-btn-more" onclick="document.getElementById('importFile').click()" title="Importar"><i data-lucide="upload"></i></button>
+        <input type="file" id="importFile" accept=".gedu,.json" style="display:none" onchange="importarBackup(event)">       </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Dados Escola -->
+<div class="modal-backdrop" id="modalEscola">
+  <div class="modal">
+    <h3>Dados da Escola</h3>
+    <label>Nome da Escola</label>
+    <input type="text" id="nomeEscola">
+    
+    <label>NIF</label>
+    <input type="text" id="nifEscola">
+    
+    
+    <label>Endereço</label>
+    <input type="text" id="endEscola">
+    
+    <label>Contacto</label>
+    <input type="text" id="telEscola">
+    
+    <label>Logo da Escola</label>
+<input type="file" id="logoEscola" accept="image/*">
+<img id="previewLogo" style="max-width:100px; margin-top:8px; display:none">
+    
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="fecharModal('modalEscola')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEscola()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ano Letivo -->
+<div class="modal-backdrop" id="modalAno">
+  <div class="modal">
+    <h3>Ano Letivo</h3>
+    <label>Ano Letivo</label>
+    <input type="text" id="anoLetivo" placeholder="2025/2026">
+    <label>Trimestre</label>
+    <select id="trimestre">
+      <option value="1º Trimestre">1º Trimestre</option>
+      <option value="2º Trimestre">2º Trimestre</option>
+      <option value="3º Trimestre">3º Trimestre</option>
+    </select>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="fecharModal('modalAno')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarAno()">Salvar</button>
+    </div>
+  </div>
+</div>
+  
+<script type="module" src="config.js">
+
+</script>
+</body>
+</html>

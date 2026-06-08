@@ -1,12 +1,6 @@
 import { auth, db } from './firebase-config.js';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, getDoc, serverTimestamp, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
-
-const functions = getFunctions();
-const congelarEscola = httpsCallable(functions, 'congelarEscola');
-const descongelarEscola = httpsCallable(functions, 'descongelarEscola');
-const toggleManutencao = httpsCallable(functions, 'toggleManutencao');
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, getDoc, serverTimestamp, orderBy, limit, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 // LOGIN
 function mostrarLogin() {
@@ -82,7 +76,7 @@ async function carregarStats() {
     else ativas++;
     if (d.inadimplente === true) inadimplentes++;
 
-    const alunos = await getDocs(query(collection(db, 'alunos'), where('escolaId', '==', docEscola.id)));
+    const alunos = await getDocs(query(collection(db, 'estudantes'), where('escolaId', '==', docEscola.id)));
     totalAlunos += alunos.size;
   }
 
@@ -111,7 +105,7 @@ async function listarEscolas() {
     const ativo = d.ativo!== false;
     const vencimento = d.vencimento?.toDate().toLocaleDateString('pt-AO') || '-';
 
-    const alunos = await getDocs(query(collection(db, 'alunos'), where('escolaId', '==', escola.id)));
+    const alunos = await getDocs(query(collection(db, 'estudantes'), where('escolaId', '==', escola.id)));
 
     const statusBadge = ativo
      ? '<span class="badge badge-green">Ativa</span>'
@@ -137,11 +131,28 @@ window.handleCongelar = async (escolaId, nome) => {
   const motivo = prompt(`Motivo do bloqueio da escola ${nome}:`, 'Inadimplência');
   if (!motivo) return;
   try {
-    await congelarEscola({ escolaId, motivo });
-    alert('Escola congelada! Todos os usuários foram deslogados.');
+    await updateDoc(doc(db, 'escolas', escolaId), {
+      ativo: false,
+      motivoBloqueio: motivo,
+      bloqueadoEm: serverTimestamp(),
+      bloqueadoPor: auth.currentUser.uid
+    });
+
+    await addDoc(collection(db, 'logs_admin'), {
+      acao: 'CONGELAR',
+      escolaId: escolaId,
+      escolaNome: nome,
+      motivo: motivo,
+      adminId: auth.currentUser.uid,
+      adminEmail: auth.currentUser.email,
+      data: serverTimestamp()
+    });
+
+    alert('Escola congelada! Usuários serão bloqueados no próximo acesso.');
     listarEscolas();
     carregarStats();
   } catch (e) {
+    console.error(e);
     alert('Erro: ' + e.message);
   }
 };
@@ -149,11 +160,28 @@ window.handleCongelar = async (escolaId, nome) => {
 window.handleDescongelar = async (escolaId, nome) => {
   if (!confirm(`Descongelar escola ${nome}?`)) return;
   try {
-    await descongelarEscola({ escolaId });
+    await updateDoc(doc(db, 'escolas', escolaId), {
+      ativo: true,
+      motivoBloqueio: null,
+      bloqueadoEm: null,
+      desbloqueadoEm: serverTimestamp(),
+      desbloqueadoPor: auth.currentUser.uid
+    });
+
+    await addDoc(collection(db, 'logs_admin'), {
+      acao: 'DESCONGELAR',
+      escolaId: escolaId,
+      escolaNome: nome,
+      adminId: auth.currentUser.uid,
+      adminEmail: auth.currentUser.email,
+      data: serverTimestamp()
+    });
+
     alert('Escola liberada!');
     listarEscolas();
     carregarStats();
   } catch (e) {
+    console.error(e);
     alert('Erro: ' + e.message);
   }
 };
@@ -283,7 +311,7 @@ async function listarLogs() {
         <td>${d.data?.toDate().toLocaleString('pt-AO') || '-'}</td>
         <td>${d.adminEmail || '-'}</td>
         <td>${d.acao}</td>
-        <td>${d.alvo}</td>
+        <td>${d.escolaNome || d.alvo || '-'}</td>
         <td>${d.ip || '-'}</td>
       </tr>`;
   });
@@ -325,9 +353,22 @@ window.criarUsuarioManual = async () => {
 window.toggleModoManutencao = async () => {
   if (!confirm('Ativar/Desativar modo manutenção? Todas as escolas serão bloqueadas.')) return;
   try {
-    const result = await toggleManutencao();
-    alert(result.data.ativo? 'Modo manutenção ATIVADO' : 'Modo manutenção DESATIVADO');
+    const configRef = doc(db, 'config', 'app');
+    const configSnap = await getDoc(configRef);
+    const novoStatus =!configSnap.data()?.manutencao;
+
+    await setDoc(configRef, { manutencao: novoStatus }, { merge: true });
+
+    await addDoc(collection(db, 'logs_admin'), {
+      acao: novoStatus? 'MANUTENCAO_ON' : 'MANUTENCAO_OFF',
+      adminId: auth.currentUser.uid,
+      adminEmail: auth.currentUser.email,
+      data: serverTimestamp()
+    });
+
+    alert(novoStatus? 'Modo manutenção ATIVADO' : 'Modo manutenção DESATIVADO');
   } catch (e) {
+    console.error(e);
     alert('Erro: ' + e.message);
   }
 };

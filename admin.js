@@ -1,7 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { 
-    getFirestore, collection, getDocs, doc, updateDoc, query, where, orderBy, getDoc 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, updateDoc, query, where, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
@@ -46,22 +44,17 @@ async function listarEscolas() {
     try {
         const escolasQuery = query(collection(db, 'escolas'), orderBy('nome'));
         const escolasSnapshot = await getDocs(escolasQuery);
-        
         todasAsEscolas = await Promise.all(escolasSnapshot.docs.map(async (escolaDoc) => {
             const escola = { id: escolaDoc.id, ...escolaDoc.data() };
-            
-            // CONTA ALUNOS NA COLEÇÃO CORRETA: estudantes
             const alunosQuery = query(collection(db, 'estudantes'), where('escolaId', '==', escola.id));
             const alunosSnapshot = await getDocs(alunosQuery);
             escola.totalAlunos = alunosSnapshot.size;
-            
             return escola;
         }));
-        
         renderizarEscolas(todasAsEscolas);
     } catch (error) {
         console.error("Erro ao listar escolas: ", error);
-        listaEscolasDiv.innerHTML = '<p style="color:red;">Erro ao carregar escolas.</p>';
+        listaEscolasDiv.innerHTML = '<p style="color:red;">Erro ao carregar escolas: ' + error.code + '</p>';
     }
 }
 
@@ -71,17 +64,11 @@ function renderizarEscolas(escolas) {
         listaEscolasDiv.innerHTML = '<p>Nenhuma escola encontrada.</p>';
         return;
     }
-    
     escolas.forEach(escola => {
         const card = document.createElement('div');
         card.className = `escola-card ${!escola.ativo ? 'congelada' : ''}`;
-        
-        // FALLBACK DE VENCIMENTO
         const vencimento = escola.dataVencimento || escola.vencimento || 'Não definido';
-        const vencimentoFormatado = vencimento !== 'Não definido' 
-            ? new Date(vencimento + 'T00:00:00').toLocaleDateString('pt-BR') 
-            : 'Não definido';
-        
+        const vencimentoFormatado = vencimento !== 'Não definido' ? new Date(vencimento + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não definido';
         card.innerHTML = `
             <div class="escola-info">
                 <h3>${escola.nome} ${!escola.ativo ? '<span class="badge-congelada">Congelada</span>' : ''}</h3>
@@ -104,14 +91,9 @@ function renderizarEscolas(escolas) {
 window.handleCongelar = async (escolaId, nome) => {
     const motivo = prompt(`Motivo do bloqueio da escola ${nome}:`, 'Inadimplência');
     if (!motivo) return;
-    
     try {
         const escolaRef = doc(db, 'escolas', escolaId);
-        await updateDoc(escolaRef, { 
-            ativo: false, 
-            motivoBloqueio: motivo, 
-            bloqueadoEm: new Date() 
-        });
+        await updateDoc(escolaRef, { ativo: false, motivoBloqueio: motivo, bloqueadoEm: new Date() });
         alert('Escola congelada com sucesso!');
         listarEscolas();
     } catch (e) {
@@ -122,14 +104,9 @@ window.handleCongelar = async (escolaId, nome) => {
 
 window.handleDescongelar = async (escolaId, nome) => {
     if (!confirm(`Tem certeza que deseja descongelar a escola ${nome}?`)) return;
-    
     try {
         const escolaRef = doc(db, 'escolas', escolaId);
-        await updateDoc(escolaRef, { 
-            ativo: true, 
-            motivoBloqueio: null, 
-            bloqueadoEm: null 
-        });
+        await updateDoc(escolaRef, { ativo: true, motivoBloqueio: null, bloqueadoEm: null });
         alert('Escola descongelada com sucesso!');
         listarEscolas();
     } catch (e) {
@@ -138,11 +115,13 @@ window.handleDescongelar = async (escolaId, nome) => {
     }
 };
 
-filtroInput.addEventListener('input', (e) => {
-    const termo = e.target.value.toLowerCase();
-    const filtradas = todasAsEscolas.filter(escola => 
-        escola.nome.toLowerCase().includes(termo) || 
-        (escola.cnpj && escola.cnpj.includes(termo))
-    );
-    renderizarEscolas(filtradas);
-});
+if (filtroInput) {
+    filtroInput.addEventListener('input', (e) => {
+        const termo = e.target.value.toLowerCase();
+        const filtradas = todasAsEscolas.filter(escola => 
+            escola.nome.toLowerCase().includes(termo) || 
+            (escola.cnpj && escola.cnpj.includes(termo))
+        );
+        renderizarEscolas(filtradas);
+    });
+            }

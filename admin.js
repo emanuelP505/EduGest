@@ -1,6 +1,6 @@
 import { auth, db } from './firebase-config.js';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, getDoc, serverTimestamp, orderBy, limit, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, getDoc, serverTimestamp, orderBy, limit, addDoc, deleteField } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 // LOGIN
 function mostrarLogin() {
@@ -63,9 +63,9 @@ onAuthStateChanged(auth, async (user) => {
     console.error('Erro:', error);
     mostrarLogin();
   }
-});
+};
 
-// STATS
+// STATS - BUG 1 CORRIGIDO: alunos -> estudantes
 async function carregarStats() {
   const escolas = await getDocs(collection(db, 'escolas'));
   let ativas = 0, congeladas = 0, inadimplentes = 0, totalAlunos = 0;
@@ -86,7 +86,7 @@ async function carregarStats() {
   document.getElementById('totalAlunos').textContent = totalAlunos;
 }
 
-// ESCOLAS + CONGELAR
+// ESCOLAS + CONGELAR - BUG 1 e 2 CORRIGIDOS
 async function listarEscolas() {
   const tbody = document.getElementById('listaEscolas');
   if (!tbody) return;
@@ -100,19 +100,19 @@ async function listarEscolas() {
 
   for (const escola of escolas.docs) {
     const d = escola.data();
-    const nome = d.nome || escola.id;
+    const nome = d.nome || d.nomeEscola || escola.id; // BUG 2: fallback
     const plano = d.plano || 'basico';
     const ativo = d.ativo!== false;
-    const vencimento = d.vencimento?.toDate().toLocaleDateString('pt-AO') || '-';
+    const vencimento = d.vencimento?.toDate().toLocaleDateString('pt-AO') || 'Sem data'; // BUG 3: fallback
 
-    const alunos = await getDocs(query(collection(db, 'estudantes'), where('escolaId', '==', escola.id)));
+    const alunos = await getDocs(query(collection(db, 'estudantes'), where('escolaId', '==', escola.id))); // BUG 1: estudantes
 
     const statusBadge = ativo
-     ? '<span class="badge badge-green">Ativa</span>'
+    ? '<span class="badge badge-green">Ativa</span>'
       : '<span class="badge badge-red">Congelada</span>';
 
     const btnAcao = ativo
-     ? `<button class="btn btn-red" onclick="handleCongelar('${escola.id}', '${nome}')">Congelar</button>`
+    ? `<button class="btn btn-red" onclick="handleCongelar('${escola.id}', '${nome}')">Congelar</button>`
       : `<button class="btn btn-green" onclick="handleDescongelar('${escola.id}', '${nome}')">Descongelar</button>`;
 
     tbody.innerHTML += `
@@ -127,15 +127,24 @@ async function listarEscolas() {
   }
 }
 
+// BUG 4 CORRIGIDO: updateDoc + new Date()
 window.handleCongelar = async (escolaId, nome) => {
   const motivo = prompt(`Motivo do bloqueio da escola ${nome}:`, 'Inadimplência');
   if (!motivo) return;
+
   try {
-    await updateDoc(doc(db, 'escolas', escolaId), {
+    const escolaRef = doc(db, 'escolas', escolaId);
+    const escolaSnap = await getDoc(escolaRef);
+
+    if (!escolaSnap.exists()) {
+      alert('Erro: Escola não encontrada no banco.');
+      return;
+    }
+
+    await updateDoc(escolaRef, {
       ativo: false,
       motivoBloqueio: motivo,
-      bloqueadoEm: serverTimestamp(),
-      bloqueadoPor: auth.currentUser.uid
+      bloqueadoEm: new Date()
     });
 
     await addDoc(collection(db, 'logs_admin'), {
@@ -145,27 +154,29 @@ window.handleCongelar = async (escolaId, nome) => {
       motivo: motivo,
       adminId: auth.currentUser.uid,
       adminEmail: auth.currentUser.email,
-      data: serverTimestamp()
+      data: new Date()
     });
 
-    alert('Escola congelada! Usuários serão bloqueados no próximo acesso.');
+    alert('Escola congelada com sucesso!');
     listarEscolas();
     carregarStats();
+
   } catch (e) {
-    console.error(e);
-    alert('Erro: ' + e.message);
+    console.error('ERRO COMPLETO:', e);
+    alert(`Erro ao congelar: ${e.code || 'desconhecido'} - ${e.message}`);
   }
 };
 
 window.handleDescongelar = async (escolaId, nome) => {
   if (!confirm(`Descongelar escola ${nome}?`)) return;
+
   try {
-    await updateDoc(doc(db, 'escolas', escolaId), {
+    const escolaRef = doc(db, 'escolas', escolaId);
+
+    await updateDoc(escolaRef, {
       ativo: true,
-      motivoBloqueio: null,
-      bloqueadoEm: null,
-      desbloqueadoEm: serverTimestamp(),
-      desbloqueadoPor: auth.currentUser.uid
+      motivoBloqueio: deleteField(),
+      desbloqueadoEm: new Date()
     });
 
     await addDoc(collection(db, 'logs_admin'), {
@@ -174,15 +185,16 @@ window.handleDescongelar = async (escolaId, nome) => {
       escolaNome: nome,
       adminId: auth.currentUser.uid,
       adminEmail: auth.currentUser.email,
-      data: serverTimestamp()
+      data: new Date()
     });
 
     alert('Escola liberada!');
     listarEscolas();
     carregarStats();
+
   } catch (e) {
-    console.error(e);
-    alert('Erro: ' + e.message);
+    console.error('ERRO COMPLETO:', e);
+    alert(`Erro ao descongelar: ${e.code || 'desconhecido'} - ${e.message}`);
   }
 };
 
@@ -259,7 +271,7 @@ window.deletarCodigo = async (codigo) => {
   listarCodigos();
 };
 
-// FINANCEIRO
+// FINANCEIRO - BUG 2 e 3 CORRIGIDOS
 async function listarFinanceiro() {
   const tbody = document.getElementById('listaFinanceiro');
   if (!tbody) return;
@@ -268,6 +280,7 @@ async function listarFinanceiro() {
 
   escolas.forEach(docEscola => {
     const d = docEscola.data();
+    const nome = d.nome || d.nomeEscola || docEscola.id; // BUG 2: fallback
     const vencimento = d.vencimento?.toDate();
     const vencido = vencimento && vencimento < new Date();
     const status = d.inadimplente? '<span class="badge badge-red">Inadimplente</span>'
@@ -276,10 +289,10 @@ async function listarFinanceiro() {
 
     tbody.innerHTML += `
       <tr>
-        <td>${d.nome}</td>
+        <td>${nome}</td>
         <td>${d.plano || 'basico'}</td>
         <td>€${d.valorMensal || 50}</td>
-        <td>${vencimento?.toLocaleDateString('pt-AO') || '-'}</td>
+        <td>${vencimento?.toLocaleDateString('pt-AO') || 'Sem data'}</td>
         <td>${status}</td>
         <td><button class="btn btn-blue" onclick="marcarPago('${docEscola.id}')">Marcar Pago</button></td>
       </tr>`;
@@ -292,7 +305,7 @@ window.marcarPago = async (escolaId) => {
   await updateDoc(doc(db, 'escolas', escolaId), {
     vencimento: novaData,
     inadimplente: false,
-    ultimoPagamento: serverTimestamp()
+    ultimoPagamento: new Date()
   });
   listarFinanceiro();
   carregarStats();
@@ -324,7 +337,7 @@ async function carregarEscolas() {
   const snap = await getDocs(collection(db, 'escolas'));
   select.innerHTML = '<option value="">Selecione a escola</option>';
   snap.forEach(docSnap => {
-    const nome = docSnap.data().nome || docSnap.id;
+    const nome = docSnap.data().nome || docSnap.data().nomeEscola || docSnap.id;
     select.innerHTML += `<option value="${docSnap.id}">${nome}</option>`;
   });
 }
@@ -363,7 +376,7 @@ window.toggleModoManutencao = async () => {
       acao: novoStatus? 'MANUTENCAO_ON' : 'MANUTENCAO_OFF',
       adminId: auth.currentUser.uid,
       adminEmail: auth.currentUser.email,
-      data: serverTimestamp()
+      data: new Date()
     });
 
     alert(novoStatus? 'Modo manutenção ATIVADO' : 'Modo manutenção DESATIVADO');

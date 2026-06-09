@@ -401,3 +401,24 @@ window.logout = async () => {
 };
 
 window.gerarCodigo = gerarCodigo;
+// DEBUG TEMPORARIO - APAGA DEPOIS
+window.addEventListener('load', () => {
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#000;color:#0f0;padding:10px;font-size:10px;z-index:99999;max-height:200px;overflow:auto';
+  div.id = 'debugLog';
+  document.body.appendChild(div);
+  
+  const oldLog = console.log;
+  const oldError = console.error;
+  console.log = (...args) => {
+    oldLog(...args);
+    document.getElementById('debugLog').innerHTML += 'LOG: ' + args.join(' ') + '<br>';
+  };
+  console.error = (...args) => {
+    oldError(...args);
+    document.getElementById('debugLog').innerHTML += 'ERRO: ' + args.join(' ') + '<br>';
+  };
+  
+  console.log('Função atual:', window.handleCongelar.toString().substring(0, 100));
+});
+// FIM DEBUG

@@ -1,15 +1,10 @@
 {
-  "cleanUrls": true,
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-        { "key": "X-Vercel-Skip-Toolbar", "value": "1" }
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
       ]
     }
-  ],
-  "firewall": {
-    "enabled": false
-  }
+  ]
 }

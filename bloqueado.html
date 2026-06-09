@@ -122,46 +122,55 @@
 </div>
 
 <script type="module">
-import { auth, db } from './firebase-config.js';
-import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBkOF8Az4NskBnGx1HyTY9wIfsFHC5aRjw",
+  authDomain: "edugest-4bdc3.firebaseapp.com",
+  projectId: "edugest-4bdc3",
+  storageBucket: "edugest-4bdc3.firebasestorage.app",
+  messagingSenderId: "1092615797287",
+  appId: "1:1092615797287:web:177ab66d1134e04cb42c02"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
 onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = 'index.html';
-    return;
-  }
-
-  try {
-    const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
-    if (!userDoc.exists()) {
-      window.location.href = 'index.html';
-      return;
+    if (!user) {
+        window.location.href = './'; // se deslogou, volta pro login
+        return;
     }
-
-    const escolaId = userDoc.data().escolaId;
-    document.getElementById('escolaId').textContent = escolaId;
-
-    const escolaDoc = await getDoc(doc(db, 'escolas', escolaId));
-    if (escolaDoc.exists()) {
-      const dados = escolaDoc.data();
-      const motivo = dados.motivoBloqueio || 'Inadimplência - Pagamento pendente';
-      document.getElementById('motivoBloqueio').textContent = motivo;
-
-      // Se escola foi reativada, volta pro app
-      if (dados.ativo !== false) {
-        window.location.href = 'dashboard.html';
-      }
+    
+    // Pega dados da escola pra mostrar motivo e ID
+    const userSnap = await getDoc(doc(db, 'usuarios', user.uid));
+    if (userSnap.exists()) {
+        const escolaId = userSnap.data().escolaId;
+        const escolaSnap = await getDoc(doc(db, 'escolas', escolaId));
+        if (escolaSnap.exists()) {
+            const escola = escolaSnap.data();
+            document.getElementById('motivo').textContent = escola.motivoBloqueio || 'Inadimplência';
+            document.getElementById('escolaId').textContent = escolaId;
+            
+            // Se a escola foi descongelada, manda pro dashboard
+            if (escola.ativo !== false) {
+                window.location.href = './dashboard.html';
+            }
+        }
     }
-  } catch (e) {
-    console.error(e);
-    document.getElementById('motivoBloqueio').textContent = 'Erro ao carregar informações';
-  }
 });
 
-window.logout = async () => {
-  await signOut(auth);
-  window.location.href = 'index.html';
+window.sair = async () => {
+    await signOut(auth);
+    window.location.href = './';
+};
+
+window.whatsapp = () => {
+    const msg = encodeURIComponent('Olá, minha escola foi suspensa no EduGest. Preciso regularizar.');
+    window.open(`https://wa.me/244922579570?text=${msg}`, '_blank'); // Troca pelo teu número
 };
 </script>
 </body>

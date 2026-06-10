@@ -10,12 +10,12 @@ import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase
 
 const firebaseConfig = {
   apiKey: "AIzaSyBkOF8Az4NskBnGx1HyTY9wIfsFHC5aRjw",
-     authDomain: "edugest-4bdc3.firebaseapp.com",
+  authDomain: "edugest-4bdc3.firebaseapp.com",
   projectId: "edugest-4bdc3",
   storageBucket: "edugest-4bdc3.firebasestorage.app",
   messagingSenderId: "1092615797287",
   appId: "1:1092615797287:web:177ab66d1134e04cb42c02",
-  measurementId: "G-HD2H2CK0H6"
+  measurementId: "G-HD2H2CK0H6O"
 };
 
 const app = initializeApp(firebaseConfig);

@@ -32,18 +32,34 @@ onAuthStateChanged(auth, (user) => {
 });
 
 async function verificarSeEhAdmin(uid) {
-    const userRef = doc(db, 'usuarios', uid);
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists() && userSnap.data().perfil === 'admin') {
-        document.getElementById('adminContent').style.display = 'block';
-        document.getElementById('acessoNegado').style.display = 'none';
-        iniciarPainel();
+  console.log('1. UID logado:', uid);
+  console.log('2. Tentando buscar doc:', 'usuarios/' + uid);
+  
+  const userRef = doc(db, 'usuarios', uid);
+  const userSnap = await getDoc(userRef);
+  
+  console.log('3. Doc existe?', userSnap.exists());
+  
+  if (userSnap.exists()) {
+    const dados = userSnap.data();
+    console.log('4. Dados completos:', dados);
+    console.log('5. perfil =', `"${dados.perfil}"`, 'tipo:', typeof dados.perfil);
+    console.log('6. Teste === admin:', dados.perfil === 'admin');
+    
+    if (dados.perfil === 'admin') {
+      console.log('7. ✅ LIBEROU PAINEL');
+      document.getElementById('adminContent').style.display = 'block';
+      document.getElementById('acessoNegado').style.display = 'none';
+      iniciarPainel();
     } else {
-        document.getElementById('acessoNegado').style.display = 'block';
-        document.getElementById('adminContent').style.display = 'none';
+      console.log('7. ❌ PERFIL NEGADO:', dados.perfil);
+      window.location.href = './index.html';
     }
+  } else {
+    console.log('7. ❌ DOC NÃO EXISTE pra esse UID');
+    window.location.href = './index.html';
+  }
 }
-
 function iniciarPainel() {
     carregarStats();
     listarEscolas();

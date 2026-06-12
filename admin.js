@@ -1,23 +1,15 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, updateDoc, query, where, orderBy, getDoc, setDoc, serverTimestamp, addDoc, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
+import { app, auth, db, functions } from './firebase-config.js';
+import { collection, getDocs, doc, updateDoc, query, where, orderBy, getDoc, setDoc, serverTimestamp, addDoc, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBkOF8Az4NskBnGx1HyTY9wIfsFHC5aRjw",
-  authDomain: "edugest-4bdc3.firebaseapp.com",
-  projectId: "edugest-4bdc3",
-  storageBucket: "edugest-4bdc3.firebasestorage.app",
-  messagingSenderId: "1092615797287",
-  appId: "1:1092615797287:web:177ab66d1134e04cb42c02",
-  measurementId: "G-HD2H2CK0H6"
-};
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-const functions = getFunctions(app, 'us-central1');
+// const app = initializeApp(firebaseConfig);
+// const db = getFirestore(app);
+// const auth = getAuth(app);
+// const functions = getFunctions(app, 'us-central1');
 
+// resto do código continua igual...
 const listaEscolasTbody = document.getElementById('listaEscolas');
 const filtroInput = document.getElementById('buscaEscola');
 let todasAsEscolas = [];

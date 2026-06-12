@@ -1,5 +1,5 @@
 alert("hello");
-import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
+import { httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
 import { app } from './firebase-config.js';
 
 const functions = getFunctions(app);

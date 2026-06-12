@@ -1,9 +1,7 @@
 alert("hello");
-import { httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
-import { app } from './firebase-config.js';
-
-const functions = getFunctions(app);
-const criarEscola = httpsCallable(functions, 'criarEscola');
+import { app, auth, db } from './firebase-config.js';
+import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const form = document.getElementById('formCadastro');
 const btn = document.getElementById('btnCadastro');
@@ -51,15 +49,65 @@ form.addEventListener('submit', async (e) => {
     return;
   }
 
-  // 4. CHAMA FUNCTION
+  // 4. CADASTRA DIRETO NO FRONTEND
   btn.disabled = true;
   btn.textContent = 'Criando escola...';
 
   try {
-    await criarEscola(valores);
+    // 4.1 Valida código convite
+    const conviteRef = doc(db, 'convites', valores.codigo);
+    const conviteSnap = await getDoc(conviteRef);
+
+    if (!conviteSnap.exists()) throw new Error('Código inválido');
+    const convite = conviteSnap.data();
+    if (convite.usado) throw new Error('Código já usado');
+    if (new Date(convite.expiraEm) < new Date()) throw new Error('Código expirado');
+
+    // 4.2 Cria usuário no Auth
+    const cred = await createUserWithEmailAndPassword(auth, valores.email, valores.senha);
+    const uid = cred.user.uid;
+
+    // 4.3 Cria documento da escola
+    const escolaRef = doc(db, 'escolas', uid);
+    await setDoc(escolaRef, {
+      nome: valores.nomeEscola,
+      plano: convite.plano || 'basico',
+      ativo: true,
+      criadoEm: serverTimestamp(),
+      criadoPor: valores.email,
+      codigoConvite: valores.codigo
+    });
+
+    // 4.4 Cria documento do usuário como diretor
+    await setDoc(doc(db, 'usuarios', uid), {
+      nome: valores.nomeDiretor,
+      email: valores.email,
+      perfil: 'diretor',
+      escolaId: uid,
+      ativo: true,
+      criadoEm: serverTimestamp()
+    });
+
+    // 4.5 Marca convite como usado
+    await updateDoc(conviteRef, {
+      usado: true,
+      usadoPor: uid,
+      usadoEm: serverTimestamp()
+    });
+
     document.getElementById('sucessoMsg').textContent = 'Escola cadastrada! Redirecionando...';
     document.getElementById('sucessoMsg').style.display = 'block';
     setTimeout(() => window.location.href = 'index.html', 2000);
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById('erroMsg').textContent = err.message;
+    document.getElementById('erroMsg').style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Criar Conta';
+  }
+});
+setTimeout(() => window.location.href = 'index.html', 2000);
   } catch (err) {
     document.getElementById('erroMsg').textContent = err.message;
     document.getElementById('erroMsg').style.display = 'block';

@@ -4,9 +4,9 @@
 
 
 
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getAuth } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBkOF8Az4NskBnGx1HyTY9wIfsFHC5aRjw",
@@ -15,9 +15,9 @@ const firebaseConfig = {
   storageBucket: "edugest-4bdc3.firebasestorage.app",
   messagingSenderId: "1092615797287",
   appId: "1:1092615797287:web:177ab66d1134e04cb42c02",
-  measurementId: "G-HD2H2CK0H6O"
+  measurementId: "G-HD2H2CK0H6" // Tirei o O do final
 };
 
-const app = initializeApp(firebaseConfig);
+export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);

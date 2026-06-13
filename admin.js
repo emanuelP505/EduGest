@@ -1,109 +1,230 @@
-alert("hello");
-import { app, auth, db } from './firebase-config.js';
-import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { app, auth, db } from './firebase-config.js';
+import { 
+  onAuthStateChanged, 
+  signOut 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { 
+  doc, 
+  getDoc, 
+  setDoc, 
+  getDocs, 
+  collection, 
+  serverTimestamp, 
+  updateDoc,
+  query,
+  where
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { 
+  initializeApp, 
+  deleteApp 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { 
+  getAuth, 
+  createUserWithEmailAndPassword 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-const form = document.getElementById('formCadastro');
-const btn = document.getElementById('btnCadastro');
+console.log('admin.js carregado');
 
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
+// 1. PROTEÇÃO DA PÁGINA ADMIN
+let authIniciado = false;
 
-  // 1. MAPEIA CAMPOS
-  const campos = {
-    codigo: document.getElementById('codigoConvite'),
-    nomeEscola: document.getElementById('nomeEscola'),
-    nomeDiretor: document.getElementById('nomeDiretor'),
-    email: document.getElementById('email'),
-    senha: document.getElementById('senha')
-  };
+onAuthStateChanged(auth, async (user) => {
+  console.log('Auth mudou:', user?.email);
 
-  // 2. LIMPA ERROS ANTERIORES
-  document.querySelectorAll('.erro-campo').forEach(el => el.textContent = '');
-  Object.values(campos).forEach(input => input.classList.remove('input-erro'));
+  // Ignora o primeiro null que o Firebase manda
+  if (!authIniciado) {
+    authIniciado = true;
+    if (!user) return;
+  }
 
-  const valores = {
-    codigo: campos.codigo.value.trim().toUpperCase(),
-    nomeEscola: campos.nomeEscola.value.trim(),
-    nomeDiretor: campos.nomeDiretor.value.trim(),
-    email: campos.email.value.trim(),
-    senha: campos.senha.value
-  };
-
-  // 3. VALIDA QUAL CAMPO FALTOU
-  const erros = [];
-  if (!valores.codigo) erros.push({ campo: 'codigo', msg: 'Código obrigatório' });
-  if (!valores.nomeEscola) erros.push({ campo: 'nomeEscola', msg: 'Nome da escola obrigatório' });
-  if (!valores.nomeDiretor) erros.push({ campo: 'nomeDiretor', msg: 'Nome do diretor obrigatório' });
-  if (!valores.email) erros.push({ campo: 'email', msg: 'E-mail obrigatório' });
-  else if (!/\S+@\S+\.\S+/.test(valores.email)) erros.push({ campo: 'email', msg: 'E-mail inválido' });
-  if (!valores.senha) erros.push({ campo: 'senha', msg: 'Senha obrigatória' });
-  else if (valores.senha.length < 6) erros.push({ campo: 'senha', msg: 'Mínimo 6 caracteres' });
-
-  if (erros.length > 0) {
-    erros.forEach(erro => {
-      campos[erro.campo].classList.add('input-erro');
-      document.getElementById(`erro-${erro.campo}`).textContent = erro.msg;
-    });
-    campos[erros[0].campo].focus();
+  if (!user) {
+    console.log('Sem usuário, voltando pro login');
+    window.location.href = 'index.html';
     return;
   }
 
-  // 4. CADASTRA DIRETO NO FRONTEND
-  btn.disabled = true;
-  btn.textContent = 'Criando escola...';
+  try {
+    const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
+    
+    if (!userDoc.exists()) {
+      console.log('Usuário sem documento');
+      await signOut(auth);
+      window.location.href = 'index.html';
+      return;
+    }
+
+    const dados = userDoc.data();
+    console.log('Perfil:', dados.perfil);
+
+    if (dados.perfil !== 'admin') {
+      console.log('Não é admin');
+      await signOut(auth);
+      window.location.href = 'index.html';
+      return;
+    }
+
+    // Libera o painel
+    document.body.style.display = 'block';
+    console.log('Admin confirmado');
+    carregarPainelAdmin();
+
+  } catch (err) {
+    console.error('Erro ao verificar admin:', err);
+    if (err.code !== 'unavailable' && err.code !== 'auth/network-request-failed') {
+      await signOut(auth);
+      window.location.href = 'index.html';
+    }
+  }
+});
+
+// 2. FUNÇÕES DO PAINEL ADMIN
+function carregarPainelAdmin() {
+  listarUsuarios();
+  listarConvites();
+  document.getElementById('btnLogout')?.addEventListener('click', logout);
+}
+
+// 2.1 Listar usuários
+async function listarUsuarios() {
+  const tbody = document.getElementById('tabelaUsuarios');
+  if (!tbody) return;
+  
+  tbody.innerHTML = '<tr><td colspan="4">Carregando...</td></tr>';
 
   try {
-    // 4.1 Valida código convite
-    const conviteRef = doc(db, 'convites', valores.codigo);
-    const conviteSnap = await getDoc(conviteRef);
-
-    if (!conviteSnap.exists()) throw new Error('Código inválido');
-    const convite = conviteSnap.data();
-    if (convite.usado) throw new Error('Código já usado');
-    if (new Date(convite.expiraEm) < new Date()) throw new Error('Código expirado');
-
-    // 4.2 Cria usuário no Auth
-    const cred = await createUserWithEmailAndPassword(auth, valores.email, valores.senha);
-    const uid = cred.user.uid;
-
-    // 4.3 Cria documento da escola
-    const escolaRef = doc(db, 'escolas', uid);
-    await setDoc(escolaRef, {
-      nome: valores.nomeEscola,
-      plano: convite.plano || 'basico',
-      ativo: true,
-      criadoEm: serverTimestamp(),
-      criadoPor: valores.email,
-      codigoConvite: valores.codigo
+    const q = query(collection(db, 'usuarios'));
+    const snap = await getDocs(q);
+    
+    tbody.innerHTML = '';
+    snap.forEach((docSnap) => {
+      const u = docSnap.data();
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${u.nome || '-'}</td>
+        <td>${u.email}</td>
+        <td>${u.perfil}</td>
+        <td>${u.ativo ? 'Ativo' : 'Inativo'}</td>
+      `;
+      tbody.appendChild(tr);
     });
-
-    // 4.4 Cria documento do usuário como diretor
-    await setDoc(doc(db, 'usuarios', uid), {
-      nome: valores.nomeDiretor,
-      email: valores.email,
-      perfil: 'diretor',
-      escolaId: uid,
-      ativo: true,
-      criadoEm: serverTimestamp()
-    });
-
-    // 4.5 Marca convite como usado
-    await updateDoc(conviteRef, {
-      usado: true,
-      usadoPor: uid,
-      usadoEm: serverTimestamp()
-    });
-
-    document.getElementById('sucessoMsg').textContent = 'Escola cadastrada! Redirecionando...';
-    document.getElementById('sucessoMsg').style.display = 'block';
-    setTimeout(() => window.location.href = 'index.html', 2000);
 
   } catch (err) {
     console.error(err);
-    document.getElementById('erroMsg').textContent = err.message;
-    document.getElementById('erroMsg').style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = 'Criar Conta';
+    tbody.innerHTML = '<tr><td colspan="4">Erro ao carregar usuários</td></tr>';
   }
-});
+}
+
+// 2.2 Listar convites
+async function listarConvites() {
+  const tbody = document.getElementById('tabelaConvites');
+  if (!tbody) return;
+
+  tbody.innerHTML = '<tr><td colspan="4">Carregando...</td></tr>';
+
+  try {
+    const snap = await getDocs(collection(db, 'convites'));
+    
+    tbody.innerHTML = '';
+    snap.forEach((docSnap) => {
+      const c = docSnap.data();
+      const tr = document.createElement('tr');
+      const expira = c.expiraEm?.toDate ? c.expiraEm.toDate().toLocaleDateString() : '-';
+      
+      tr.innerHTML = `
+        <td>${docSnap.id}</td>
+        <td>${c.plano || '-'}</td>
+        <td>${c.usado ? 'Usado' : 'Disponível'}</td>
+        <td>${expira}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+  } catch (err) {
+    console.error(err);
+    tbody.innerHTML = '<tr><td colspan="4">Erro ao carregar convites</td></tr>';
+  }
+}
+
+// 2.3 Criar usuário manual sem deslogar admin
+window.criarUsuarioManual = async () => {
+  const email = prompt("Email do novo usuário:");
+  if (!email) return;
+  
+  const senha = prompt("Senha (mínimo 6 caracteres):");
+  if (!senha || senha.length < 6) return alert("Senha inválida");
+  
+  const nome = prompt("Nome completo:");
+  if (!nome) return;
+  
+  const perfil = prompt("Perfil: admin, diretor, professor, aluno");
+  if (!['admin', 'diretor', 'professor', 'aluno'].includes(perfil)) {
+    return alert("Perfil inválido");
+  }
+
+  try {
+    // Usa app secundário pra não deslogar o admin
+    const secondaryApp = initializeApp(auth.app.options, "Secondary");
+    const secondaryAuth = getAuth(secondaryApp);
+
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, email, senha);
+    const uid = cred.user.uid;
+
+    // Salva no Firestore usando auth principal
+    await setDoc(doc(db, 'usuarios', uid), {
+      nome: nome,
+      email: email,
+      perfil: perfil,
+      ativo: true,
+      criadoEm: serverTimestamp(),
+      criadoPor: auth.currentUser.email
+    });
+
+    // Limpa app secundário
+    await signOut(secondaryAuth);
+    await deleteApp(secondaryApp);
+
+    alert('Usuário criado com sucesso!');
+    listarUsuarios();
+
+  } catch (err) {
+    console.error(err);
+    alert('Erro: ' + err.message);
+  }
+}
+
+// 2.4 Criar código convite
+window.criarConvite = async () => {
+  const codigo = prompt("Código do convite:").toUpperCase();
+  if (!codigo) return;
+  
+  const plano = prompt("Plano: basico, premium");
+  if (!['basico', 'premium'].includes(plano)) return alert("Plano inválido");
+  
+  const dias = parseInt(prompt("Válido por quantos dias?")) || 30;
+
+  try {
+    const expiraEm = new Date();
+    expiraEm.setDate(expiraEm.getDate() + dias);
+
+    await setDoc(doc(db, 'convites', codigo), {
+      plano: plano,
+      usado: false,
+      expiraEm: expiraEm,
+      criadoEm: serverTimestamp(),
+      criadoPor: auth.currentUser.email
+    });
+
+    alert('Convite criado!');
+    listarConvites();
+
+  } catch (err) {
+    console.error(err);
+    alert('Erro: ' + err.message);
+  }
+}
+
+// 2.5 Logout
+async function logout() {
+  await signOut(auth);
+  window.location.href = 'index.html';
+                    }
